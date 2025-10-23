@@ -1,2 +1,12 @@
+CC=gcc
+CFLAGS= -Wall -g -lm 
+TARGET= pathfinding
+SRCS= main.c
+
 all:
-	gcc -o main main.c
+	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
+
+clean:
+	rm -f $(TARGET)
+
+re: clean all
