@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS= -Wall -g -lm 
 TARGET= pathfinding
-SRCS= main.c
+SRCS= main.c library.c
 
 all:
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
