@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "library.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -9,6 +11,6 @@ int main(int argc, char *argv[])
     printf("links: %d\n", count_links(argc, argv));
     printf("start: %d\n", get_start_node(argc, argv));
     printf("end: %d\n", get_end_node(argc, argv));
-    // printf("%d", count_nodes(contenu));
+    init_node(argv[1]);
     return 0;
 }

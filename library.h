@@ -3,8 +3,8 @@ typedef struct n{
     struct n **links;
 } Node;
 
-char* open_read_file(int argc, char *argv[], char *buffer);
-
+Node** init_node(char *filename);
+int count_nodes_with_name(char *filename);
 int count_nodes(int argc, char *argv[]);
 int count_links(int argc, char *argv[]);
 int get_start_node(int argc, char *argv[]);
