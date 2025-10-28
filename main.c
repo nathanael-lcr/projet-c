@@ -25,13 +25,9 @@ int main(int argc, char *argv[])
     int start_id = get_start_node(argc, argv);
     
     //Puis on itère pour savoir si node[0]->id puis node[1]->id etc == 3
-    /* Dans ce cas : 
-    nodes[2]->id = 3
-    start_id = 3
-    3 == 3 ? oui → start_node = nodes[2], break */
     Node *start_node = NULL;
-    int size = count_nodes_with_name(argv[1]);//sert à connaître combien de noeud y'a dans mon graphe
-    Node *head = NULL;//pointe vers noeud de dépard
+    //int size = count_nodes_with_name(argv[1]);
+    //Node *head = NULL;
     for (int i = 0; i < count_nodes_with_name(argv[1]); i++) {
         if (nodes[i]->id == start_id) {
             start_node = nodes[i];
@@ -40,7 +36,11 @@ int main(int argc, char *argv[])
     }
     //Puis on appelle ta sublime fonction pour display et paf
     display_nodes(start_node);
-    get_unconnected_nodes(nodes,size,head);
+    printf("\n");
+    Node **unconnected = get_unconnected_nodes(nodes, count_nodes_with_name(argv[1]), start_node);
+    print_unconnected_nodes(unconnected);
+    
+    free(unconnected);
     printf("\n");
     return 0;
 }

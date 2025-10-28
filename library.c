@@ -4,25 +4,6 @@
 #include <stdlib.h>
 
 
-
-
-/* Alors pour commencer tu peux aller regarder en bas le init_node car c'est
-à partir de lui que beaucoup des nouvelles fonctions sonts appelées
-
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
 int count_nodes_with_name(char *filename){
     if (filename == NULL) return 1;
     int number_nodes = 0;
@@ -225,7 +206,7 @@ void display_nodes(Node* start) {
 }
 
 Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
-    display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
+    //display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
     int count=0;
     Node **unconnected_nodes=malloc(sizeof(Node*)*size);
     for (int i=0; i<size;i++){
@@ -237,4 +218,19 @@ Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
     unconnected_nodes[count] = NULL; //marquer la fin
     return unconnected_nodes;
     free(unconnected_nodes);
+}
+
+void print_unconnected_nodes(Node **unconnected_nodes)
+{
+    if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL) {
+        return;
+    }
+    
+    printf("unconnected nodes :\n");
+    int i = 0;
+    while (unconnected_nodes[i] != NULL) {
+        printf("%d ", unconnected_nodes[i]->id);
+        i++;
+    }
+    printf("\n");
 }
