@@ -210,14 +210,31 @@ Node** init_node(char *filename)
 }
 
 //Ca je t'explique pas c'est toi qui l'as fais
+
+//voici mes codes :3
 void display_nodes(Node* start) {
     if (start == NULL) return;
-    if (start->visited == 1) return;
+    if (start->visited == 1) return;//évite les doublons
     
-    start->visited = 1;
+    start->visited = 1;//marque comme visité
     printf("%d ", start->id);
-    
+    //Parcourt récursivement tous les nœuds connectés au nœud start
     for (int i = 0; i < start->link_count; i++) {
         display_nodes(start->links[i]);
     }
+}
+
+Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
+    display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
+    int count=0;
+    Node **unconnected_nodes=malloc(sizeof(Node*)*size);
+    for (int i=0; i<size;i++){
+        if(nodes[i]->visited == 0){
+            unconnected_nodes[count]=nodes[i];
+            count++;//nœuds nn connecter ds count
+        }
+    }
+    unconnected_nodes[count] = NULL; //marquer la fin
+    return unconnected_nodes;
+    free(unconnected_nodes);
 }

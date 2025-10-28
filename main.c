@@ -30,15 +30,17 @@ int main(int argc, char *argv[])
     start_id = 3
     3 == 3 ? oui → start_node = nodes[2], break */
     Node *start_node = NULL;
+    int size = count_nodes_with_name(argv[1]);//sert à connaître combien de noeud y'a dans mon graphe
+    Node *head = NULL;//pointe vers noeud de dépard
     for (int i = 0; i < count_nodes_with_name(argv[1]); i++) {
         if (nodes[i]->id == start_id) {
             start_node = nodes[i];
             break;
         }
     }
-    
     //Puis on appelle ta sublime fonction pour display et paf
     display_nodes(start_node);
+    get_unconnected_nodes(nodes,size,head);
     printf("\n");
     return 0;
 }
