@@ -225,7 +225,7 @@ void print_unconnected_nodes(Node **unconnected_nodes)
     if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL) {
         return;
     }
-    
+
     printf("unconnected nodes :\n");
     int i = 0;
     while (unconnected_nodes[i] != NULL) {
@@ -234,3 +234,41 @@ void print_unconnected_nodes(Node **unconnected_nodes)
     }
     printf("\n");
 }
+//On doit faire le parcourt en largeur
+void find_shortest_path(Node *start, Node *end, int size){
+    int head = 0; 
+    int tail = 0;
+    Node* current = start;
+    Node** file=malloc(sizeof(Node*)*size);
+    file[tail++] = start; // ajout du départ à la file
+    start->visited = 1;
+    start->distance = 0;
+    //Parcourt tous les nœuds de la file dans l’ordre FIFO
+    while(head < tail){ //noeud nn traité donc boucle
+        current=file[head];//traite le noeux en haut de la file
+        head++;
+        if (current == end) break;
+  
+        for (int i = 0; i < current->link_count; i++){
+            if(current->links[i]->visited == 0){
+                current->links[i]->visited = 1; //Empêche de revisiter un noeud déjà parcouru
+                current->links[i]->parent = current;//Sauvegarde le nœud parent, utile pour reconstruire le chemin
+                current->links[i]->distance =current->distance + 1;//Met à jour la distance du voisin depuis le départ.
+                file[tail++] = current->links[i];//Ajoute le voisin à la fin de la file, pour qu’il soit exploré plus tard.
+            }
+        }
+    }
+    free(file);
+    return;
+}
+/*              //Pas finis
+void print_find_shortest_path(Node **find_shortest_path){
+    for (int i = end->parent; i < end->start; i++){
+
+    }
+    if (end->parent == NULL && end != start) {
+    printf("No path found.\n");
+    }
+    printf("\n");
+}
+    */

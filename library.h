@@ -4,6 +4,8 @@ typedef struct n
     struct n **links;
     int link_count;
     int visited;
+    int distance;
+    int parent;
 } Node;
 
 int count_nodes_with_name(char *filename);
@@ -19,3 +21,5 @@ Node **init_node(char *filename);
 void display_nodes(Node *start);
 Node **get_unconnected_nodes(Node **nodes, int size, Node *head);
 void print_unconnected_nodes(Node **unconnected_nodes);
+void find_shortest_path(Node *start, Node *end, int size);
+//void print_find_shortest_path(Node **find_shortest_path);
