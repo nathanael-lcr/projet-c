@@ -234,21 +234,36 @@ void print_unconnected_nodes(Node **unconnected_nodes)
     }
     printf("\n");
 }
-//On doit faire le parcourt en largeur
+
+void reset_nodes(Node **nodes, int size)
+{
+    for (int i = 0; i < size; i++) {
+        nodes[i]->visited = 0;
+        nodes[i]->distance = 0;
+        nodes[i]->parent = NULL;
+    }
+}
+
 void find_shortest_path(Node *start, Node *end, int size){
     int head = 0; 
     int tail = 0;
+    if (start == NULL) {
+        printf("Start node not found!\n");
+    }
+    if (end == NULL) {
+        printf("End node not found!\n");
+    }
     Node* current = start;
     Node** file=malloc(sizeof(Node*)*size);
     file[tail++] = start; // ajout du départ à la file
     start->visited = 1;
     start->distance = 0;
     //Parcourt tous les nœuds de la file dans l’ordre FIFO
-    while(head < tail){ //noeud nn traité donc boucle
+    while(head < tail){ //noeud non traité donc boucle
         current=file[head];//traite le noeux en haut de la file
         head++;
         if (current == end) break;
-  
+
         for (int i = 0; i < current->link_count; i++){
             if(current->links[i]->visited == 0){
                 current->links[i]->visited = 1; //Empêche de revisiter un noeud déjà parcouru
@@ -261,14 +276,44 @@ void find_shortest_path(Node *start, Node *end, int size){
     free(file);
     return;
 }
-/*              //Pas finis
-void print_find_shortest_path(Node **find_shortest_path){
-    for (int i = end->parent; i < end->start; i++){
 
-    }
+void print_shortest_path(Node *start, Node *end)
+{
+    // Vérifier si un chemin existe
     if (end->parent == NULL && end != start) {
-    printf("No path found.\n");
+        printf("No path found.\n");
+        return;
+    }
+    
+    // Compter la longueur du chemin
+    int path_length = 0;
+    Node *current = end;
+    while (current != NULL) {
+        path_length++;
+        current = current->parent;
+    }
+    
+    // Créer un tableau pour stocker le chemin (dans l'ordre inverse)
+    Node **path = malloc(sizeof(Node*) * path_length);
+    current = end;
+    int index = path_length - 1;
+    
+    // Remplir le tableau en remontant depuis end vers start
+    while (current != NULL) {
+        path[index] = current;
+        current = current->parent;
+        index--;
+    }
+    
+    // Afficher le chemin
+    printf("Shortest path (distance: %d): ", end->distance);
+    for (int i = 0; i < path_length; i++) {
+        printf("%d", path[i]->id);
+        if (i < path_length - 1) {
+            printf(" -> ");
+        }
     }
     printf("\n");
+    
+    free(path);
 }
-    */

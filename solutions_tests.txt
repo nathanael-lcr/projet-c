@@ -1,0 +1,395 @@
+#nodes
+#start
+1
+2
+3
+#end
+4
+#links
+1-2
+2-3
+3-4
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 3): 1 -> 2 -> 3 -> 4
+```
+
+---
+
+### Test 2 : Chemin très court
+**Fichier : test_simple_2.txt**
+```
+#nodes
+#start
+5
+#end
+8
+#links
+5-8
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 1): 5 -> 8
+```
+
+---
+
+## Pathfinding cas 1 (2 points) - Boucles et plusieurs chemins
+
+### Test 3 : Carré avec 2 chemins égaux
+**Fichier : test_cas1_1.txt**
+```
+#nodes
+#start
+1
+2
+#end
+3
+4
+#links
+1-2
+2-3
+1-4
+4-3
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 2): 1 -> 2 -> 3
+```
+*ou*
+```
+Shortest path (distance: 2): 1 -> 4 -> 3
+```
+
+---
+
+### Test 4 : Plusieurs chemins, trouver le plus court
+**Fichier : test_cas1_2.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+6
+#end
+7
+#links
+1-2
+2-3
+3-4
+4-5
+5-6
+6-7
+1-4
+4-7
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 2): 1 -> 4 -> 7
+```
+
+---
+
+## Pathfinding cas 2 (2 points) - Cas particuliers
+
+### Test 5 : Start = End
+**Fichier : test_cas2_1.txt**
+```
+#nodes
+10
+#start
+#end
+20
+30
+#links
+10-20
+20-30
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 0): 20
+```
+
+---
+
+### Test 6 : Graphe déconnecté
+**Fichier : test_cas2_2.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+#end
+6
+#links
+1-2
+2-3
+4-5
+5-6
+```
+
+**Résultat attendu :**
+```
+No path found.
+```
+
+---
+
+## Pathfinding cas complexes (3 points)
+
+### Test 7 : Graphe en étoile (hub central)
+**Fichier : test_complexe_1.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+#end
+15
+#links
+1-8
+2-8
+3-8
+4-8
+5-8
+6-8
+7-8
+8-9
+9-10
+9-11
+9-12
+9-13
+9-14
+9-15
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 3): 1 -> 8 -> 9 -> 15
+```
+
+---
+
+### Test 8 : Grille 4x4
+**Fichier : test_complexe_2.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+#end
+16
+#links
+1-2
+2-3
+3-4
+1-5
+2-6
+3-7
+4-8
+5-6
+6-7
+7-8
+5-9
+6-10
+7-11
+8-12
+9-10
+10-11
+11-12
+9-13
+10-14
+11-15
+12-16
+13-14
+14-15
+15-16
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 6): 1 -> 2 -> 3 -> 4 -> 8 -> 12 -> 16
+```
+
+---
+
+### Test 9 : Labyrinthe avec multiples boucles
+**Fichier : test_complexe_3.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+6
+7
+8
+9
+#end
+10
+#links
+1-2
+1-3
+2-4
+3-4
+3-5
+4-6
+5-6
+5-7
+6-8
+7-8
+7-9
+8-10
+9-10
+2-5
+4-7
+6-9
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 4): 1 -> 2 -> 4 -> 6 -> 8 -> 10
+```
+
+---
+
+### Test 10 : Roue (centre + cercle)
+**Fichier : test_complexe_4.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+#end
+5
+6
+7
+8
+9
+#links
+1-9
+2-9
+3-9
+4-9
+5-9
+6-9
+7-9
+8-9
+1-2
+2-3
+3-4
+4-5
+5-6
+6-7
+7-8
+8-1
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 2): 1 -> 9 -> 5
+```
+
+---
+
+### Test 11 : IDs non séquentiels
+**Fichier : test_complexe_5.txt**
+```
+#nodes
+#start
+100
+250
+37
+999
+5
+#end
+842
+#links
+100-37
+37-5
+5-250
+250-999
+999-842
+100-250
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 3): 100 -> 250 -> 999 -> 842
+```
+
+---
+
+### Test 12 : Graphe très dense
+**Fichier : test_complexe_6.txt**
+```
+#nodes
+#start
+1
+2
+3
+4
+5
+#end
+6
+#links
+1-2
+1-3
+1-4
+1-5
+2-3
+2-4
+2-5
+2-6
+3-4
+3-5
+3-6
+4-5
+4-6
+5-6
+```
+
+**Résultat attendu :**
+```
+Shortest path (distance: 2): 1 -> 2 -> 6
