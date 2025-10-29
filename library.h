@@ -8,6 +8,13 @@ typedef struct n
     struct n *parent;
 } Node;
 
+typedef enum{
+    FILE_NOT_FOUND=1,
+    NO_START_NODE=2,
+    NO_END_NODE=3,
+    BAD_FILE_FORMAT=4,
+}Error;
+
 int count_nodes_with_name(char *filename);
 int count_links(int argc, char *argv[]);
 int get_start_node(int argc, char *argv[]);
@@ -22,5 +29,6 @@ void display_nodes(Node *start);
 Node **get_unconnected_nodes(Node **nodes, int size, Node *head);
 void print_unconnected_nodes(Node **unconnected_nodes);
 void reset_nodes(Node **nodes, int size);
+void breadth_first_sarch(Node *current, Node **file, int *tail);
 void find_shortest_path(Node *start, Node *end, int size);
 void print_shortest_path(Node *start, Node *end);

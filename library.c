@@ -5,10 +5,11 @@
 
 
 int count_nodes_with_name(char *filename){
-    if (filename == NULL) return 1;
+    if (filename == NULL) return BAD_FILE_FORMAT;
     int number_nodes = 0;
     char buffer[256];
     FILE *file = fopen(filename, "r");
+    if (file == NULL) return FILE_NOT_FOUND;
     while (fgets(buffer, sizeof(buffer), file) != NULL)
     {
         if (buffer[0] >= '0' && buffer[0] <= '9' &&
@@ -27,6 +28,7 @@ int count_links(int argc, char *argv[])
     int number_links = 0;
     char buffer[256];
     FILE *file = fopen(argv[1], "r");
+    if (file == NULL) return FILE_NOT_FOUND;
     while (fgets(buffer, sizeof(buffer), file) != NULL)
     {
         if (buffer[0] >= '0' && buffer[0] <= '9' &&
@@ -41,10 +43,11 @@ int count_links(int argc, char *argv[])
 
 int get_start_node(int argc, char *argv[])
 {
-    if (argc < 2 || argv[1] == NULL) return 1;
+    if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
     char buffer[256];
     int next_start = 0;
     FILE *file = fopen(argv[1], "r");
+    if (file == NULL) return FILE_NOT_FOUND;
     while (fgets(buffer, sizeof(buffer), file) != NULL)
     {
         buffer[strcspn(buffer, "\r\n")] = '\0';
@@ -58,15 +61,16 @@ int get_start_node(int argc, char *argv[])
         }
     }
     fclose(file);
-    return 0;
+    return NO_START_NODE;
 }
 
 int get_end_node(int argc, char *argv[])
 {
-    if (argc < 2 || argv[1] == NULL) return 1;
+    if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
     char buffer[256];
     int next_end = 0;
     FILE *file = fopen(argv[1], "r");
+    if (file == NULL) return FILE_NOT_FOUND;
     while (fgets(buffer, sizeof(buffer), file) != NULL)
     {
         buffer[strcspn(buffer, "\r\n")] = '\0';
@@ -80,7 +84,7 @@ int get_end_node(int argc, char *argv[])
         }
     }
     fclose(file);
-    return 0;
+    return NO_END_NODE;
 }
 
 
@@ -95,15 +99,17 @@ int find_node_index(Node **nodes, int nb_nodes, int id)
 Node** create_nodes(char *filename, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
-    if (file == NULL) return NULL;
+    if (file == NULL) return (Node**)FILE_NOT_FOUND;
     
     Node **nodes = malloc(sizeof(Node*) * nb_nodes);
+    if (!nodes) return (Node**)BAD_FILE_FORMAT;
     char buffer[256];
     int index = 0;
     
     while (fgets(buffer, sizeof(buffer), file))
         if (buffer[0] >= '0' && buffer[0] <= '9' && !strchr(buffer, '-')) {
             nodes[index] = malloc(sizeof(Node));
+            if (!nodes[index]) return (Node**)BAD_FILE_FORMAT;
             nodes[index]->id = atoi(buffer);
             nodes[index]->links = NULL;
             nodes[index]->link_count = 0;
@@ -118,9 +124,10 @@ Node** create_nodes(char *filename, int nb_nodes)
 int* count_links_filename(char *filename, Node **nodes, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
-    if (file == NULL) return NULL;
+    if (file == NULL) return (Node**)FILE_NOT_FOUND;
     
     int *link_counts = calloc(nb_nodes, sizeof(int));
+    if (!link_counts) return (int*)BAD_FILE_FORMAT;
     char buffer[256];
     
     while (fgets(buffer, sizeof(buffer), file))
@@ -139,6 +146,9 @@ int* count_links_filename(char *filename, Node **nodes, int nb_nodes)
 
 void allocate_links(Node **nodes, int *link_counts, int nb_nodes)
 {
+    if (nodes == NULL || link_counts == NULL) {
+        return BAD_FILE_FORMAT;
+    }
     for (int i = 0; i < nb_nodes; i++) {
         nodes[i]->links = malloc(sizeof(Node*) * link_counts[i]);
         nodes[i]->link_count = 0;
@@ -148,7 +158,7 @@ void allocate_links(Node **nodes, int *link_counts, int nb_nodes)
 void fill_links(char *filename, Node **nodes, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
-    if (file == NULL) return;
+    if (file == NULL) return FILE_NOT_FOUND;
     
     char buffer[256];
     while (fgets(buffer, sizeof(buffer), file))
@@ -171,6 +181,7 @@ Node** init_node(char *filename)
 {
     //On compte simplement le nombre de nodes dans le fichier
     int nb_nodes = count_nodes_with_name(filename);
+    if (nb_nodes <= 0) return BAD_FILE_FORMAT;
     //On crée des nodes (les structs les vrais) pour chaque node lu
     //(pas besoin d'aller regarder la fonction c'est juste une boucle qui crée des nodes)
     Node **nodes = create_nodes(filename, nb_nodes);
@@ -209,6 +220,7 @@ Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
     //display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
     int count=0;
     Node **unconnected_nodes=malloc(sizeof(Node*)*size);
+    if (!unconnected_nodes) return BAD_FILE_FORMAT;
     for (int i=0; i<size;i++){
         if(nodes[i]->visited == 0){
             unconnected_nodes[count]=nodes[i];
@@ -243,18 +255,31 @@ void reset_nodes(Node **nodes, int size)
         nodes[i]->parent = NULL;
     }
 }
+void breadth_first_sarch(Node *current, Node **file, int *tail) {
+    for (int i = 0; i < current->link_count; i++) {
+        if (current->links[i]->visited == 0) {
+            current->links[i]->visited = 1;                     // Marque le voisin comme visité
+            current->links[i]->parent = current;                // Sauvegarde le parent
+            current->links[i]->distance = current->distance + 1;// Met à jour la distance
+            file[(*tail)++] = current->links[i];                // Ajoute à la file
+        }
+    }
+}
 
 void find_shortest_path(Node *start, Node *end, int size){
     int head = 0; 
     int tail = 0;
     if (start == NULL) {
         printf("Start node not found!\n");
+        return NO_START_NODE;
     }
     if (end == NULL) {
         printf("End node not found!\n");
+        return NO_END_NODE;
     }
     Node* current = start;
     Node** file=malloc(sizeof(Node*)*size);
+    if (!file) return BAD_FILE_FORMAT;
     file[tail++] = start; // ajout du départ à la file
     start->visited = 1;
     start->distance = 0;
@@ -263,15 +288,6 @@ void find_shortest_path(Node *start, Node *end, int size){
         current=file[head];//traite le noeux en haut de la file
         head++;
         if (current == end) break;
-
-        for (int i = 0; i < current->link_count; i++){
-            if(current->links[i]->visited == 0){
-                current->links[i]->visited = 1; //Empêche de revisiter un noeud déjà parcouru
-                current->links[i]->parent = current;//Sauvegarde le nœud parent, utile pour reconstruire le chemin
-                current->links[i]->distance =current->distance + 1;//Met à jour la distance du voisin depuis le départ.
-                file[tail++] = current->links[i];//Ajoute le voisin à la fin de la file, pour qu’il soit exploré plus tard.
-            }
-        }
     }
     free(file);
     return;
@@ -284,7 +300,7 @@ void print_shortest_path(Node *start, Node *end)
         printf("No path found.\n");
         return;
     }
-    
+
     // Compter la longueur du chemin
     int path_length = 0;
     Node *current = end;
@@ -292,9 +308,10 @@ void print_shortest_path(Node *start, Node *end)
         path_length++;
         current = current->parent;
     }
-    
+
     // Créer un tableau pour stocker le chemin (dans l'ordre inverse)
     Node **path = malloc(sizeof(Node*) * path_length);
+    if (!path) return BAD_FILE_FORMAT;
     current = end;
     int index = path_length - 1;
     
