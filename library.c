@@ -5,6 +5,7 @@
 
 int last_error = 0;
 
+// Counts the number of nodes in the file
 int count_nodes_with_name(char *filename){
     if (filename == NULL) {
         last_error = BAD_FILE_FORMAT;
@@ -26,6 +27,7 @@ int count_nodes_with_name(char *filename){
     return number_nodes;
 }
 
+// Counts the number of links in the file
 int count_links(int argc, char *argv[]) {
     if (argc < 2 || argv[1] == NULL) {
         last_error = BAD_FILE_FORMAT;
@@ -47,11 +49,13 @@ int count_links(int argc, char *argv[]) {
     return number_links;
 }
 
+// Checks if a buffer line contains a node number (no dash)
 int is_node_number(char *buffer) {
     return buffer[0] >= '0' && buffer[0] <= '9' && 
            strchr(buffer, '-') == NULL;
 }
 
+// Finds and returns the node ID after a specific tag in the file
 int get_node_after_tag(int argc, char *argv[], char *tag, 
                        int error) {
     if (argc < 2 || argv[1] == NULL) {
@@ -75,14 +79,17 @@ int get_node_after_tag(int argc, char *argv[], char *tag,
     return -1;
 }
 
+// Gets the start node ID from the file
 int get_start_node(int argc, char *argv[]) {
     return get_node_after_tag(argc, argv, "#start", NO_START_NODE);
 }
 
+// Gets the end node ID from the file
 int get_end_node(int argc, char *argv[]) {
     return get_node_after_tag(argc, argv, "#end", NO_END_NODE);
 }
 
+// Finds the index of a node in the nodes array by its ID
 int find_node_index(Node **nodes, int nb_nodes, int id) {
     for (int i = 0; i < nb_nodes; i++)
         if (nodes[i]->id == id)
@@ -90,6 +97,7 @@ int find_node_index(Node **nodes, int nb_nodes, int id) {
     return -1;
 }
 
+// Initializes a node structure with default values
 void init_node_struct(Node *node, int id) {
     node->id = id;
     node->links = NULL;
@@ -99,18 +107,21 @@ void init_node_struct(Node *node, int id) {
     node->parent = NULL;
 }
 
+// Frees memory allocated for an array of nodes
 void cleanup_nodes(Node **nodes, int count) {
     for (int i = 0; i < count; i++)
         free(nodes[i]);
     free(nodes);
 }
 
+// Creates and initializes a single node with the given ID
 Node* create_single_node(int id) {
     Node *node = malloc(sizeof(Node));
     if (node) init_node_struct(node, id);
     return node;
 }
 
+// Reads node IDs from file and creates node structures
 int read_and_create_nodes(FILE *file, Node **nodes) {
     char buffer[256];
     int index = 0;
@@ -125,6 +136,7 @@ int read_and_create_nodes(FILE *file, Node **nodes) {
     return -1;
 }
 
+// Creates an array of nodes from the file
 Node** create_nodes(char *filename, int nb_nodes) {
     FILE *file = fopen(filename, "r");
     if (!file) { last_error = FILE_NOT_FOUND; return NULL; }
@@ -144,6 +156,7 @@ Node** create_nodes(char *filename, int nb_nodes) {
     return nodes;
 }
 
+// Recursively marks all nodes connected to the start node as visited
 void mark_connected_nodes(Node* start) {
     if (start == NULL || start->visited == 1) return;
     start->visited = 1;
@@ -151,12 +164,14 @@ void mark_connected_nodes(Node* start) {
         mark_connected_nodes(start->links[i]);
 }
 
+// Increments the link count for a node with the given ID
 void increment_link_count(int *counts, Node **nodes, int nb, 
                           int id) {
     int idx = find_node_index(nodes, nb, id);
     if (idx != -1) counts[idx]++;
 }
 
+// Processes a link line and increments link counts for both nodes
 void process_link_line(char *buffer, int *counts, Node **nodes, 
                        int nb) {
     int n1, n2;
@@ -166,6 +181,7 @@ void process_link_line(char *buffer, int *counts, Node **nodes,
     }
 }
 
+// Counts how many links each node has from the file
 int* count_links_filename(char *filename, Node **nodes, int nb) {
     FILE *f = fopen(filename, "r");
     if (!f) { last_error = FILE_NOT_FOUND; return NULL; }
@@ -183,6 +199,7 @@ int* count_links_filename(char *filename, Node **nodes, int nb) {
     return counts;
 }
 
+// Allocates memory for each node's links array based on link counts
 int allocate_links(Node **nodes, int *link_counts, int nb_nodes) {
     if (nodes == NULL || link_counts == NULL) {
         last_error = BAD_FILE_FORMAT;
@@ -201,6 +218,7 @@ int allocate_links(Node **nodes, int *link_counts, int nb_nodes) {
     return 0;
 }
 
+// Reads the file and fills in the bidirectional links between nodes
 void fill_links(char *filename, Node **nodes, int nb_nodes) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {last_error = FILE_NOT_FOUND; return;}
@@ -222,6 +240,7 @@ void fill_links(char *filename, Node **nodes, int nb_nodes) {
     fclose(file);
 }
 
+// Initializes the complete graph structure from the file
 Node** init_node(char *filename) {
     last_error = 0;
     int nb_nodes = count_nodes_with_name(filename);
@@ -243,6 +262,7 @@ Node** init_node(char *filename) {
     return nodes;
 }
 
+// Recursively displays all connected nodes starting from a given node
 void display_nodes(Node* start) {
     if (start == NULL || start->visited == 1) return;
     start->visited = 1;
@@ -251,6 +271,7 @@ void display_nodes(Node* start) {
         display_nodes(start->links[i]);
 }
 
+// Returns an array of nodes not connected to the head node
 Node** get_unconnected_nodes(Node **nodes, int size, Node *head) {
     mark_connected_nodes(head);
     int count = 0;
@@ -269,6 +290,7 @@ Node** get_unconnected_nodes(Node **nodes, int size, Node *head) {
     return unconnected;
 }
 
+// Prints all unconnected nodes to the console
 void print_unconnected_nodes(Node **unconnected_nodes) {
     if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL)
         return;
@@ -281,6 +303,7 @@ void print_unconnected_nodes(Node **unconnected_nodes) {
     printf("\n");
 }
 
+// Resets visited, distance, and parent fields for all nodes
 void reset_nodes(Node **nodes, int size) {
     for (int i = 0; i < size; i++) {
         nodes[i]->visited = 0;
@@ -289,6 +312,7 @@ void reset_nodes(Node **nodes, int size) {
     }
 }
 
+// Marks a neighbor node as visited and adds it to the BFS queue
 void explore_neighbor(Node *neighbor, Node *parent, Node **file, 
                       int *tail) {
     neighbor->visited = 1;
@@ -297,6 +321,7 @@ void explore_neighbor(Node *neighbor, Node *parent, Node **file,
     file[(*tail)++] = neighbor;
 }
 
+// Explores all unvisited neighbors of the current node in BFS
 void breadth_first_search(Node *current, Node **file, int *tail) {
     for (int i = 0; i < current->link_count; i++) {
         if (current->links[i]->visited == 0) {
@@ -305,12 +330,14 @@ void breadth_first_search(Node *current, Node **file, int *tail) {
     }
 }
 
+// Validates that start and end nodes exist for pathfinding
 int validate_path_nodes(Node *start, Node *end) {
     if (!start) { last_error = NO_START_NODE; return 0; }
     if (!end) { last_error = NO_END_NODE; return 0; }
     return 1;
 }
 
+// Finds the shortest path between start and end nodes using BFS
 void find_shortest_path(Node *start, Node *end, int size) {
     if (!validate_path_nodes(start, end)) return;
     Node **file = malloc(sizeof(Node*) * size);
@@ -330,6 +357,7 @@ void find_shortest_path(Node *start, Node *end, int size) {
     free(file);
 }
 
+// Prints the path array with formatting
 void print_path_array(Node **path, int length) {
     printf("pathfinding:\n");
     for (int i = 0; i < length; i++) {
@@ -339,6 +367,7 @@ void print_path_array(Node **path, int length) {
     printf("\n");
 }
 
+// Reconstructs and prints the shortest path from start to end
 void print_shortest_path(Node *start, Node *end) {
     if (end->parent == NULL && end != start) return;
     int path_length = 0;
@@ -359,6 +388,7 @@ void print_shortest_path(Node *start, Node *end) {
     free(path);
 }
 
+// Prints the appropriate error message based on error code
 void print_error(int error_code) {
     switch(error_code) {
         case FILE_NOT_FOUND:
