@@ -3,57 +3,107 @@
 #include <string.h>
 #include "library.h"
 
-
-int main(int argc, char *argv[])
-{
-
-    printf("=== DEBUG ===\n");
-    printf("Nodes count: %d\n", count_nodes_with_name(argv[1]));
-    printf("Start node: %d\n", get_start_node(argc, argv));
-    printf("End node: %d\n", get_end_node(argc, argv));
-    
-    Node **nodes = init_node(argv[1]);
-    int nb_nodes = count_nodes_with_name(argv[1]);
-    
-    printf("\nNodes créés:\n");
-    for (int i = 0; i < nb_nodes; i++) {
-        printf("nodes[%d] -> id=%d, links=%d\n", i, nodes[i]->id, nodes[i]->link_count);
+static int validate_args(int argc) {
+    if (argc < 2) {
+        print_error(BAD_FILE_FORMAT);
+        return BAD_FILE_FORMAT;
     }
-    printf("=============\n\n");
+    return 0;
+}
 
-    //Bon ca c'est nos petits trucs pour calculer le nombre de nodes
-    printf("nodes: %d\n", count_nodes_with_name(argv[1]));
-    printf("links: %d\n", count_links(argc, argv)); //Nombre de Links
-    printf("start: %d\n", get_start_node(argc, argv)); //Node de départ
-    printf("end: %d\n", get_end_node(argc, argv)); //Node d'arrivée
-    
-    //Ensuite ici on récupère l'ID du node qui suit #start exemple : 3
-    int start_id = get_start_node(argc, argv);
-    int end_id = get_end_node(argc, argv);
-    
-    Node *start_node = NULL;
-    Node *end_node = NULL;
-    
-    for (int i = 0; i < nb_nodes; i++) {
-        if (nodes[i]->id == start_id) start_node = nodes[i];
-        if (nodes[i]->id == end_id) end_node = nodes[i];
+static int load_basic_info(int argc, char *argv[], int *nb_nodes, int *start_id, int *end_id) {
+    *nb_nodes = count_nodes_with_name(argv[1]);
+    if (*nb_nodes <= 0) {
+        print_error(last_error ?: BAD_FILE_FORMAT);
+        return last_error ?: BAD_FILE_FORMAT;
     }
-    
-    //Puis on appelle ta sublime fonction pour display et paf
-    display_nodes(start_node);
-    printf("\n");
-    Node **unconnected = get_unconnected_nodes(nodes, count_nodes_with_name(argv[1]), start_node);
-    print_unconnected_nodes(unconnected);
+    *start_id = get_start_node(argc, argv);
+    if (*start_id < 0) return last_error;
+    *end_id = get_end_node(argc, argv);
+    if (*end_id < 0) return last_error;
+    return 0;
+}
 
-    reset_nodes(nodes, nb_nodes);
+static Node **load_nodes(char *filename) {
+    Node **nodes = init_node(filename);
+    if (!nodes) print_error(last_error);
+    return nodes;
+}
 
-    // Lancer l'algorithme
+static void find_node_ptrs(Node **nodes, int nb_nodes, int start_id, int end_id, Node **start_node, Node **end_node) {
+    for (int i = 0; i < nb_nodes; i++) {
+        if (nodes[i]->id == start_id) *start_node = nodes[i];
+        if (nodes[i]->id == end_id) *end_node = nodes[i];
+    }
+}
+
+static int safe_pathfind(Node *start_node, Node *end_node, int nb_nodes, Node **nodes) {
     find_shortest_path(start_node, end_node, nb_nodes);
-    
-    // Afficher le résultat
-    print_shortest_path(start_node, end_node);
-    
+    if (last_error != 0) {
+        print_error(last_error);
+        for (int i = 0; i < nb_nodes; i++) {
+            if (nodes[i]->links) free(nodes[i]->links);
+            free(nodes[i]);
+        }
+        free(nodes);
+        return last_error;
+    }
+    return 0;
+}
+
+static void show_info(int argc, char *argv[], int nb_nodes, int start_id, int end_id) {
+    printf("nodes: %d\n", nb_nodes);
+    printf("links: %d\n", count_links(argc, argv));
+    printf("start: %d\n", start_id);
+    printf("end: %d\n", end_id);
+}
+
+static void process_unconnected(Node **nodes, int nb_nodes, Node *start_node) {
+    reset_nodes(nodes, nb_nodes);
+    Node **unconnected = get_unconnected_nodes(nodes, nb_nodes, start_node);
+    print_unconnected_nodes(unconnected);
     free(unconnected);
-    printf("\n");
+}
+
+static void final_path(Node **nodes, int nb_nodes, Node *start_node, Node *end_node) {
+    reset_nodes(nodes, nb_nodes);
+    find_shortest_path(start_node, end_node, nb_nodes);
+    print_shortest_path(start_node, end_node);
+}
+
+static void cleanup(Node **nodes, int nb_nodes) {
+    for (int i = 0; i < nb_nodes; i++) {
+        if (nodes[i]->links) free(nodes[i]->links);
+        free(nodes[i]);
+    }
+    free(nodes);
+}
+
+int handle_errors(int code) {
+    if (code) print_error(code);
+    return code;
+}
+
+int main(int argc, char *argv[]) {
+    int nb_nodes, start_id, end_id;
+    int ret = validate_args(argc);
+    if (handle_errors(ret)) return ret;
+
+    ret = load_basic_info(argc, argv, &nb_nodes, &start_id, &end_id);
+    if (handle_errors(ret)) return ret;
+
+    Node **nodes = load_nodes(argv[1]);
+    if (!nodes) return handle_errors(last_error);
+
+    Node *start_node = NULL, *end_node = NULL;
+    find_node_ptrs(nodes, nb_nodes, start_id, end_id, &start_node, &end_node);
+
+    ret = safe_pathfind(start_node, end_node, nb_nodes, nodes);
+    if (handle_errors(ret)) return ret;
+
+    show_info(argc, argv, nb_nodes, start_id, end_id);
+    process_unconnected(nodes, nb_nodes, start_node);
+    final_path(nodes, nb_nodes, start_node, end_node);
+    cleanup(nodes, nb_nodes);
     return 0;
 }

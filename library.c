@@ -3,242 +3,276 @@
 #include <string.h>
 #include <stdlib.h>
 
+int last_error = 0;
 
 int count_nodes_with_name(char *filename){
-    if (filename == NULL) return BAD_FILE_FORMAT;
+    if (filename == NULL) {
+        last_error = BAD_FILE_FORMAT;
+        return -1;
+    }
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        last_error = FILE_NOT_FOUND;
+        return -1;
+    }
     int number_nodes = 0;
     char buffer[256];
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) return FILE_NOT_FOUND;
-    while (fgets(buffer, sizeof(buffer), file) != NULL)
-    {
-        if (buffer[0] >= '0' && buffer[0] <= '9' &&
-            strchr(buffer, '-') == NULL)
-        {
+    while (fgets(buffer, sizeof(buffer), file) != NULL) {
+        if (buffer[0] >= '0' && buffer[0] <= '9' && 
+            strchr(buffer, '-') == NULL) 
             number_nodes++;
-        }
     }
     fclose(file);
     return number_nodes;
 }
 
-int count_links(int argc, char *argv[])
-{
-    if (argc < 2 || argv[1] == NULL) return 1;
+int count_links(int argc, char *argv[]) {
+    if (argc < 2 || argv[1] == NULL) {
+        last_error = BAD_FILE_FORMAT;
+        return -1;
+    }
+    FILE *file = fopen(argv[1], "r");
+    if (file == NULL) {
+        last_error = FILE_NOT_FOUND;
+        return -1;
+    }
     int number_links = 0;
     char buffer[256];
-    FILE *file = fopen(argv[1], "r");
-    if (file == NULL) return FILE_NOT_FOUND;
-    while (fgets(buffer, sizeof(buffer), file) != NULL)
-    {
-        if (buffer[0] >= '0' && buffer[0] <= '9' &&
-            strchr(buffer, '-') != NULL)
-        {
+    while (fgets(buffer, sizeof(buffer), file) != NULL) {
+        if (buffer[0] >= '0' && buffer[0] <= '9' && 
+            strchr(buffer, '-') != NULL) 
             number_links++;
-        }
     }   
     fclose(file);
     return number_links;
 }
 
-int get_start_node(int argc, char *argv[])
-{
-    if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
-    char buffer[256];
-    int next_start = 0;
+int is_node_number(char *buffer) {
+    return buffer[0] >= '0' && buffer[0] <= '9' && 
+           strchr(buffer, '-') == NULL;
+}
+
+int get_node_after_tag(int argc, char *argv[], char *tag, 
+                       int error) {
+    if (argc < 2 || argv[1] == NULL) {
+        last_error = BAD_FILE_FORMAT;
+        return -1;
+    }
     FILE *file = fopen(argv[1], "r");
-    if (file == NULL) return FILE_NOT_FOUND;
-    while (fgets(buffer, sizeof(buffer), file) != NULL)
-    {
+    if (!file) { last_error = FILE_NOT_FOUND; return -1; }
+    char buffer[256];
+    int found_tag = 0;
+    while (fgets(buffer, sizeof(buffer), file)) {
         buffer[strcspn(buffer, "\r\n")] = '\0';
-        if (strcmp(buffer, "#start") == 0)
-            next_start = 1;
-        if (next_start && buffer[0] >= '0' &&
-            buffer[0] <= '9' && strchr(buffer, '-') == NULL)
-        {
+        if (strcmp(buffer, tag) == 0) found_tag = 1;
+        if (found_tag && is_node_number(buffer)) {
             fclose(file);
             return atoi(buffer);
         }
     }
     fclose(file);
-    return NO_START_NODE;
+    last_error = error;
+    return -1;
 }
 
-int get_end_node(int argc, char *argv[])
-{
-    if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
-    char buffer[256];
-    int next_end = 0;
-    FILE *file = fopen(argv[1], "r");
-    if (file == NULL) return FILE_NOT_FOUND;
-    while (fgets(buffer, sizeof(buffer), file) != NULL)
-    {
-        buffer[strcspn(buffer, "\r\n")] = '\0';
-        if (strcmp(buffer, "#end") == 0)
-            next_end = 1;
-        if (next_end && buffer[0] >= '0' && buffer[0] <= '9' &&
-            strchr(buffer, '-') == NULL)
-        {
-            fclose(file);
-            return atoi(buffer);
-        }
-    }
-    fclose(file);
-    return NO_END_NODE;
+int get_start_node(int argc, char *argv[]) {
+    return get_node_after_tag(argc, argv, "#start", NO_START_NODE);
 }
 
+int get_end_node(int argc, char *argv[]) {
+    return get_node_after_tag(argc, argv, "#end", NO_END_NODE);
+}
 
-int find_node_index(Node **nodes, int nb_nodes, int id)
-{
+int find_node_index(Node **nodes, int nb_nodes, int id) {
     for (int i = 0; i < nb_nodes; i++)
         if (nodes[i]->id == id)
             return i;
     return -1;
 }
 
-Node** create_nodes(char *filename, int nb_nodes)
-{
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) return (Node**)FILE_NOT_FOUND;
-    
-    Node **nodes = malloc(sizeof(Node*) * nb_nodes);
-    if (!nodes) return (Node**)BAD_FILE_FORMAT;
+void init_node_struct(Node *node, int id) {
+    node->id = id;
+    node->links = NULL;
+    node->link_count = 0;
+    node->visited = 0;
+    node->distance = 0;
+    node->parent = NULL;
+}
+
+void cleanup_nodes(Node **nodes, int count) {
+    for (int i = 0; i < count; i++)
+        free(nodes[i]);
+    free(nodes);
+}
+
+Node* create_single_node(int id) {
+    Node *node = malloc(sizeof(Node));
+    if (node) init_node_struct(node, id);
+    return node;
+}
+
+int read_and_create_nodes(FILE *file, Node **nodes) {
     char buffer[256];
     int index = 0;
-    
-    while (fgets(buffer, sizeof(buffer), file))
-        if (buffer[0] >= '0' && buffer[0] <= '9' && !strchr(buffer, '-')) {
-            nodes[index] = malloc(sizeof(Node));
-            if (!nodes[index]) return (Node**)BAD_FILE_FORMAT;
-            nodes[index]->id = atoi(buffer);
-            nodes[index]->links = NULL;
-            nodes[index]->link_count = 0;
-            nodes[index]->visited = 0;
+    while (fgets(buffer, sizeof(buffer), file)) {
+        if (buffer[0] >= '0' && buffer[0] <= '9' && 
+            !strchr(buffer, '-')) {
+            nodes[index] = create_single_node(atoi(buffer));
+            if (!nodes[index]) return index;
             index++;
         }
-    
+    }
+    return -1;
+}
+
+Node** create_nodes(char *filename, int nb_nodes) {
+    FILE *file = fopen(filename, "r");
+    if (!file) { last_error = FILE_NOT_FOUND; return NULL; }
+    Node **nodes = malloc(sizeof(Node*) * nb_nodes);
+    if (!nodes) { 
+        fclose(file); 
+        last_error = BAD_FILE_FORMAT; 
+        return NULL; 
+    }
+    int fail_idx = read_and_create_nodes(file, nodes);
     fclose(file);
+    if (fail_idx >= 0) {
+        cleanup_nodes(nodes, fail_idx);
+        last_error = BAD_FILE_FORMAT;
+        return NULL;
+    }
     return nodes;
 }
 
-int* count_links_filename(char *filename, Node **nodes, int nb_nodes)
-{
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) return (Node**)FILE_NOT_FOUND;
-    
-    int *link_counts = calloc(nb_nodes, sizeof(int));
-    if (!link_counts) return (int*)BAD_FILE_FORMAT;
-    char buffer[256];
-    
-    while (fgets(buffer, sizeof(buffer), file))
-        if (strchr(buffer, '-')) {
-            int node1, node2;
-            sscanf(buffer, "%d-%d", &node1, &node2);
-            int nodeindex1 = find_node_index(nodes, nb_nodes, node1);
-            int nodeindex2 = find_node_index(nodes, nb_nodes, node2);
-            if (nodeindex1 != -1) link_counts[nodeindex1]++;
-            if (nodeindex2 != -1) link_counts[nodeindex2]++;
-        }
-    
-    fclose(file);
-    return link_counts;
+void mark_connected_nodes(Node* start) {
+    if (start == NULL || start->visited == 1) return;
+    start->visited = 1;
+    for (int i = 0; i < start->link_count; i++)
+        mark_connected_nodes(start->links[i]);
 }
 
-void allocate_links(Node **nodes, int *link_counts, int nb_nodes)
-{
+void increment_link_count(int *counts, Node **nodes, int nb, 
+                          int id) {
+    int idx = find_node_index(nodes, nb, id);
+    if (idx != -1) counts[idx]++;
+}
+
+void process_link_line(char *buffer, int *counts, Node **nodes, 
+                       int nb) {
+    int n1, n2;
+    if (sscanf(buffer, "%d-%d", &n1, &n2) == 2) {
+        increment_link_count(counts, nodes, nb, n1);
+        increment_link_count(counts, nodes, nb, n2);
+    }
+}
+
+int* count_links_filename(char *filename, Node **nodes, int nb) {
+    FILE *f = fopen(filename, "r");
+    if (!f) { last_error = FILE_NOT_FOUND; return NULL; }
+    int *counts = calloc(nb, sizeof(int));
+    if (!counts) { 
+        fclose(f); 
+        last_error = BAD_FILE_FORMAT; 
+        return NULL; 
+    }
+    char buf[256];
+    while (fgets(buf, sizeof(buf), f))
+        if (strchr(buf, '-')) 
+            process_link_line(buf, counts, nodes, nb);
+    fclose(f);
+    return counts;
+}
+
+int allocate_links(Node **nodes, int *link_counts, int nb_nodes) {
     if (nodes == NULL || link_counts == NULL) {
-        return BAD_FILE_FORMAT;
+        last_error = BAD_FILE_FORMAT;
+        return -1;
     }
     for (int i = 0; i < nb_nodes; i++) {
-        nodes[i]->links = malloc(sizeof(Node*) * link_counts[i]);
+        if (link_counts[i] > 0) {
+            nodes[i]->links = malloc(sizeof(Node*) * link_counts[i]);
+            if (!nodes[i]->links) {
+                last_error = BAD_FILE_FORMAT;
+                return -1;
+            }
+        }
         nodes[i]->link_count = 0;
     }
+    return 0;
 }
 
-void fill_links(char *filename, Node **nodes, int nb_nodes)
-{
+void fill_links(char *filename, Node **nodes, int nb_nodes) {
     FILE *file = fopen(filename, "r");
-    if (file == NULL) return FILE_NOT_FOUND;
-    
+    if (file == NULL) {last_error = FILE_NOT_FOUND; return;}
     char buffer[256];
-    while (fgets(buffer, sizeof(buffer), file))
+    while (fgets(buffer, sizeof(buffer), file)) {
         if (strchr(buffer, '-')) {
             int node1, node2;
             sscanf(buffer, "%d-%d", &node1, &node2);
-            int nodeidx1 = find_node_index(nodes, nb_nodes, node1);
-            int nodeidx2 = find_node_index(nodes, nb_nodes, node2);
-            
-            if (nodeidx1 != -1 && nodeidx2 != -1) {
-                nodes[nodeidx1]->links[nodes[nodeidx1]->link_count++] = nodes[nodeidx2];
-                nodes[nodeidx2]->links[nodes[nodeidx2]->link_count++] = nodes[nodeidx1];
+            int idx1 = find_node_index(nodes, nb_nodes, node1);
+            int idx2 = find_node_index(nodes, nb_nodes, node2);
+            if (idx1 != -1 && idx2 != -1) {
+                nodes[idx1]->links[nodes[idx1]->link_count++] = 
+                    nodes[idx2];
+                nodes[idx2]->links[nodes[idx2]->link_count++] = 
+                    nodes[idx1];
             }
         }
-    
+    }
     fclose(file);
 }
 
-Node** init_node(char *filename)
-{
-    //On compte simplement le nombre de nodes dans le fichier
+Node** init_node(char *filename) {
+    last_error = 0;
     int nb_nodes = count_nodes_with_name(filename);
-    if (nb_nodes <= 0) return BAD_FILE_FORMAT;
-    //On crée des nodes (les structs les vrais) pour chaque node lu
-    //(pas besoin d'aller regarder la fonction c'est juste une boucle qui crée des nodes)
+    if (nb_nodes <= 0) {
+        if (last_error == 0){ last_error = BAD_FILE_FORMAT; return NULL;}
+    }
     Node **nodes = create_nodes(filename, nb_nodes);
     if (nodes == NULL) return NULL;
     
-    //On relit le fichier, ligne par ligne
-    //Pour chaque ligne avec un `-` (comme `3-4`), on parse les deux nombres
-    //On trouve les index des nodes concernés et on incrémente leurs compteurs
     int *link_counts = count_links_filename(filename, nodes, nb_nodes);
-    //Par rapport au nombre de liens vu avant on allocate la mémoire
-    allocate_links(nodes, link_counts, nb_nodes);
-    //On finis par remplir les liens et donc les faire pointer les uns vers les autres
+    if (link_counts == NULL) { cleanup_nodes(nodes, nb_nodes); return NULL;}
+    if (allocate_links(nodes, link_counts, nb_nodes) < 0) {
+        cleanup_nodes(nodes, nb_nodes);
+        free(link_counts);
+        return NULL;
+    }
     fill_links(filename, nodes, nb_nodes);
-    
-    //Toujours libérer la mémoire
     free(link_counts);
     return nodes;
 }
 
-//Ca je t'explique pas c'est toi qui l'as fais
-
-//voici mes codes :3
 void display_nodes(Node* start) {
-    if (start == NULL) return;
-    if (start->visited == 1) return;//évite les doublons
-    
-    start->visited = 1;//marque comme visité
+    if (start == NULL || start->visited == 1) return;
+    start->visited = 1;
     printf("%d ", start->id);
-    //Parcourt récursivement tous les nœuds connectés au nœud start
-    for (int i = 0; i < start->link_count; i++) {
+    for (int i = 0; i < start->link_count; i++)
         display_nodes(start->links[i]);
-    }
 }
 
-Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
-    //display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
-    int count=0;
-    Node **unconnected_nodes=malloc(sizeof(Node*)*size);
-    if (!unconnected_nodes) return BAD_FILE_FORMAT;
-    for (int i=0; i<size;i++){
-        if(nodes[i]->visited == 0){
-            unconnected_nodes[count]=nodes[i];
-            count++;//nœuds nn connecter ds count
+Node** get_unconnected_nodes(Node **nodes, int size, Node *head) {
+    mark_connected_nodes(head);
+    int count = 0;
+    Node **unconnected = malloc(sizeof(Node*) * (size + 1));
+    if (!unconnected) {
+        last_error = BAD_FILE_FORMAT;
+        return NULL;
+    }
+    for (int i = 0; i < size; i++) {
+        if(nodes[i]->visited == 0) {
+            unconnected[count] = nodes[i];
+            count++;
         }
     }
-    unconnected_nodes[count] = NULL; //marquer la fin
-    return unconnected_nodes;
-    free(unconnected_nodes);
+    unconnected[count] = NULL;
+    return unconnected;
 }
 
-void print_unconnected_nodes(Node **unconnected_nodes)
-{
-    if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL) {
+void print_unconnected_nodes(Node **unconnected_nodes) {
+    if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL)
         return;
-    }
-
-    printf("unconnected nodes :\n");
+    printf("unconnected nodes:\n");
     int i = 0;
     while (unconnected_nodes[i] != NULL) {
         printf("%d ", unconnected_nodes[i]->id);
@@ -247,90 +281,100 @@ void print_unconnected_nodes(Node **unconnected_nodes)
     printf("\n");
 }
 
-void reset_nodes(Node **nodes, int size)
-{
+void reset_nodes(Node **nodes, int size) {
     for (int i = 0; i < size; i++) {
         nodes[i]->visited = 0;
         nodes[i]->distance = 0;
         nodes[i]->parent = NULL;
     }
 }
-void breadth_first_sarch(Node *current, Node **file, int *tail) {
+
+void explore_neighbor(Node *neighbor, Node *parent, Node **file, 
+                      int *tail) {
+    neighbor->visited = 1;
+    neighbor->parent = parent;
+    neighbor->distance = parent->distance + 1;
+    file[(*tail)++] = neighbor;
+}
+
+void breadth_first_search(Node *current, Node **file, int *tail) {
     for (int i = 0; i < current->link_count; i++) {
         if (current->links[i]->visited == 0) {
-            current->links[i]->visited = 1;                     // Marque le voisin comme visité
-            current->links[i]->parent = current;                // Sauvegarde le parent
-            current->links[i]->distance = current->distance + 1;// Met à jour la distance
-            file[(*tail)++] = current->links[i];                // Ajoute à la file
+            explore_neighbor(current->links[i], current, file, tail);
         }
     }
 }
 
-void find_shortest_path(Node *start, Node *end, int size){
-    int head = 0; 
-    int tail = 0;
-    if (start == NULL) {
-        printf("Start node not found!\n");
-        return NO_START_NODE;
-    }
-    if (end == NULL) {
-        printf("End node not found!\n");
-        return NO_END_NODE;
-    }
-    Node* current = start;
-    Node** file=malloc(sizeof(Node*)*size);
-    if (!file) return BAD_FILE_FORMAT;
-    file[tail++] = start; // ajout du départ à la file
-    start->visited = 1;
-    start->distance = 0;
-    //Parcourt tous les nœuds de la file dans l’ordre FIFO
-    while(head < tail){ //noeud non traité donc boucle
-        current=file[head];//traite le noeux en haut de la file
-        head++;
-        if (current == end) break;
-    }
-    free(file);
-    return;
+int validate_path_nodes(Node *start, Node *end) {
+    if (!start) { last_error = NO_START_NODE; return 0; }
+    if (!end) { last_error = NO_END_NODE; return 0; }
+    return 1;
 }
 
-void print_shortest_path(Node *start, Node *end)
-{
-    // Vérifier si un chemin existe
-    if (end->parent == NULL && end != start) {
-        printf("No path found.\n");
-        return;
+void find_shortest_path(Node *start, Node *end, int size) {
+    if (!validate_path_nodes(start, end)) return;
+    Node **file = malloc(sizeof(Node*) * size);
+    if (!file) { last_error = BAD_FILE_FORMAT; return; }
+    
+    int head = 0, tail = 0;
+    file[tail++] = start;
+    start->visited = 1;
+    start->distance = 0;
+    
+    while(head < tail) {
+        Node *current = file[head++];
+        if (current == end) break;
+        breadth_first_search(current, file, &tail);
     }
+    if (end->visited == 0) last_error = BAD_FILE_FORMAT;
+    free(file);
+}
 
-    // Compter la longueur du chemin
+void print_path_array(Node **path, int length) {
+    printf("pathfinding:\n");
+    for (int i = 0; i < length; i++) {
+        printf("%d", path[i]->id);
+        if (i < length - 1) printf(" ");
+    }
+    printf("\n");
+}
+
+void print_shortest_path(Node *start, Node *end) {
+    if (end->parent == NULL && end != start) return;
     int path_length = 0;
     Node *current = end;
     while (current != NULL) {
         path_length++;
         current = current->parent;
     }
-
-    // Créer un tableau pour stocker le chemin (dans l'ordre inverse)
     Node **path = malloc(sizeof(Node*) * path_length);
-    if (!path) return BAD_FILE_FORMAT;
+    if (!path) { last_error = BAD_FILE_FORMAT; return;}
     current = end;
     int index = path_length - 1;
-    
-    // Remplir le tableau en remontant depuis end vers start
     while (current != NULL) {
-        path[index] = current;
+        path[index--] = current;
         current = current->parent;
-        index--;
     }
-    
-    // Afficher le chemin
-    printf("Shortest path (distance: %d): ", end->distance);
-    for (int i = 0; i < path_length; i++) {
-        printf("%d", path[i]->id);
-        if (i < path_length - 1) {
-            printf(" -> ");
-        }
-    }
-    printf("\n");
-    
+    print_path_array(path, path_length);
     free(path);
+}
+
+void print_error(int error_code) {
+    switch(error_code) {
+        case FILE_NOT_FOUND:
+            printf("FILE_NOT_FOUND\n");
+            break;
+        case NO_START_NODE:
+            printf("NO_START_NODE\n");
+            break;
+        case NO_END_NODE:
+            printf("NO_END_NODE\n");
+            break;
+        case BAD_FILE_FORMAT:
+            printf("BAD_FILE_FORMAT\n");
+            break;
+        default:
+            printf("UNKNOWN_ERROR\n");
+            break;
+    }
 }
