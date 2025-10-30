@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-
+//To know how many nodes need to be allocated before creating the graph.
 int count_nodes_with_name(char *filename){
     if (filename == NULL) return BAD_FILE_FORMAT;
     int number_nodes = 0;
@@ -21,7 +21,7 @@ int count_nodes_with_name(char *filename){
     fclose(file);
     return number_nodes;
 }
-
+//Counts the total number of connections between nodes
 int count_links(int argc, char *argv[])
 {
     if (argc < 2 || argv[1] == NULL) return 1;
@@ -40,7 +40,7 @@ int count_links(int argc, char *argv[])
     fclose(file);
     return number_links;
 }
-
+//Identifies where the pathfinding should begin.
 int get_start_node(int argc, char *argv[])
 {
     if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
@@ -63,7 +63,7 @@ int get_start_node(int argc, char *argv[])
     fclose(file);
     return NO_START_NODE;
 }
-
+//Identifies where the pathfinding should stop.
 int get_end_node(int argc, char *argv[])
 {
     if (argc < 2 || argv[1] == NULL) return BAD_FILE_FORMAT;
@@ -87,7 +87,7 @@ int get_end_node(int argc, char *argv[])
     return NO_END_NODE;
 }
 
-
+//Helps connect nodes together by looking them up by ID
 int find_node_index(Node **nodes, int nb_nodes, int id)
 {
     for (int i = 0; i < nb_nodes; i++)
@@ -95,7 +95,7 @@ int find_node_index(Node **nodes, int nb_nodes, int id)
             return i;
     return -1;
 }
-
+//Creates and initializes the node structures.
 Node** create_nodes(char *filename, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
@@ -120,7 +120,7 @@ Node** create_nodes(char *filename, int nb_nodes)
     fclose(file);
     return nodes;
 }
-
+//Determines how many neighbors (links) each node will have.
 int* count_links_filename(char *filename, Node **nodes, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
@@ -143,7 +143,7 @@ int* count_links_filename(char *filename, Node **nodes, int nb_nodes)
     fclose(file);
     return link_counts;
 }
-
+//Allocates memory for adjacency lists (neighbor pointers).
 void allocate_links(Node **nodes, int *link_counts, int nb_nodes)
 {
     if (nodes == NULL || link_counts == NULL) {
@@ -154,7 +154,7 @@ void allocate_links(Node **nodes, int *link_counts, int nb_nodes)
         nodes[i]->link_count = 0;
     }
 }
-
+//Builds the actual connections between nodes.
 void fill_links(char *filename, Node **nodes, int nb_nodes)
 {
     FILE *file = fopen(filename, "r");
@@ -176,62 +176,56 @@ void fill_links(char *filename, Node **nodes, int nb_nodes)
     
     fclose(file);
 }
-
+//Central function that builds the graph structure from a file.
 Node** init_node(char *filename)
 {
-    //On compte simplement le nombre de nodes dans le fichier
+    //We count the number of nodes in the file
     int nb_nodes = count_nodes_with_name(filename);
     if (nb_nodes <= 0) return BAD_FILE_FORMAT;
-    //On crée des nodes (les structs les vrais) pour chaque node lu
-    //(pas besoin d'aller regarder la fonction c'est juste une boucle qui crée des nodes)
+    //We create nodes (the real structs) for each node read
     Node **nodes = create_nodes(filename, nb_nodes);
     if (nodes == NULL) return NULL;
     
-    //On relit le fichier, ligne par ligne
-    //Pour chaque ligne avec un `-` (comme `3-4`), on parse les deux nombres
-    //On trouve les index des nodes concernés et on incrémente leurs compteurs
+    //For each line with a `-` (like `3-4`), we parse the both numbers
+    //We find the indexes of the relevant nodes and increment their counters
     int *link_counts = count_links_filename(filename, nodes, nb_nodes);
-    //Par rapport au nombre de liens vu avant on allocate la mémoire
     allocate_links(nodes, link_counts, nb_nodes);
-    //On finis par remplir les liens et donc les faire pointer les uns vers les autres
+    //We end up filling in the links and therefore making them point to each other
     fill_links(filename, nodes, nb_nodes);
     
-    //Toujours libérer la mémoire
     free(link_counts);
     return nodes;
 }
 
-//Ca je t'explique pas c'est toi qui l'as fais
 
-//voici mes codes :3
+//Displays the list of connected nodes in the graph.
 void display_nodes(Node* start) {
     if (start == NULL) return;
-    if (start->visited == 1) return;//évite les doublons
+    if (start->visited == 1) return;
     
-    start->visited = 1;//marque comme visité
+    start->visited = 1;
     printf("%d ", start->id);
-    //Parcourt récursivement tous les nœuds connectés au nœud start
     for (int i = 0; i < start->link_count; i++) {
         display_nodes(start->links[i]);
     }
 }
-
+//Finds and returns isolated nodes in the graph.
 Node** get_unconnected_nodes( Node **nodes, int size, Node *head ){
-    //display_nodes(head);//marque tous les nœuds accessibles depuis head avec visited = 1
+    //display_nodes(head);//marks all nodes accessible from head with visited = 1
     int count=0;
     Node **unconnected_nodes=malloc(sizeof(Node*)*size);
     if (!unconnected_nodes) return BAD_FILE_FORMAT;
     for (int i=0; i<size;i++){
         if(nodes[i]->visited == 0){
             unconnected_nodes[count]=nodes[i];
-            count++;//nœuds nn connecter ds count
+            count++;
         }
     }
-    unconnected_nodes[count] = NULL; //marquer la fin
+    unconnected_nodes[count] = NULL; //mark the end
     return unconnected_nodes;
     free(unconnected_nodes);
 }
-
+//Displays all disconnected nodes.
 void print_unconnected_nodes(Node **unconnected_nodes)
 {
     if (unconnected_nodes == NULL || unconnected_nodes[0] == NULL) {
@@ -246,7 +240,7 @@ void print_unconnected_nodes(Node **unconnected_nodes)
     }
     printf("\n");
 }
-
+//Prepares the graph for a new search (like before running BFS again).
 void reset_nodes(Node **nodes, int size)
 {
     for (int i = 0; i < size; i++) {
@@ -255,17 +249,18 @@ void reset_nodes(Node **nodes, int size)
         nodes[i]->parent = NULL;
     }
 }
+//Helper function for one BFS step — processes all neighbors.
 void breadth_first_sarch(Node *current, Node **file, int *tail) {
     for (int i = 0; i < current->link_count; i++) {
         if (current->links[i]->visited == 0) {
-            current->links[i]->visited = 1;                     // Marque le voisin comme visité
-            current->links[i]->parent = current;                // Sauvegarde le parent
-            current->links[i]->distance = current->distance + 1;// Met à jour la distance
-            file[(*tail)++] = current->links[i];                // Ajoute à la file
+            current->links[i]->visited = 1;                     
+            current->links[i]->parent = current;                
+            current->links[i]->distance = current->distance + 1;
+            file[(*tail)++] = current->links[i];                
         }
     }
 }
-
+//Explores the graph to compute the shortest path using BFS.
 void find_shortest_path(Node *start, Node *end, int size){
     int head = 0; 
     int tail = 0;
@@ -280,28 +275,28 @@ void find_shortest_path(Node *start, Node *end, int size){
     Node* current = start;
     Node** file=malloc(sizeof(Node*)*size);
     if (!file) return BAD_FILE_FORMAT;
-    file[tail++] = start; // ajout du départ à la file
+    file[tail++] = start; 
     start->visited = 1;
     start->distance = 0;
-    //Parcourt tous les nœuds de la file dans l’ordre FIFO
-    while(head < tail){ //noeud non traité donc boucle
-        current=file[head];//traite le noeux en haut de la file
+    //Traverses all nodes in the queue in FIFO order
+    while(head < tail){ 
+        current=file[head];
         head++;
         if (current == end) break;
     }
     free(file);
     return;
 }
-
+//displays the computed shortest path in a readable format.
 void print_shortest_path(Node *start, Node *end)
 {
-    // Vérifier si un chemin existe
+    // Check if a path exists
     if (end->parent == NULL && end != start) {
         printf("No path found.\n");
         return;
     }
 
-    // Compter la longueur du chemin
+    // Count the length of the path
     int path_length = 0;
     Node *current = end;
     while (current != NULL) {
@@ -309,20 +304,20 @@ void print_shortest_path(Node *start, Node *end)
         current = current->parent;
     }
 
-    // Créer un tableau pour stocker le chemin (dans l'ordre inverse)
+    // Create an array to store the path (in reverse order)
     Node **path = malloc(sizeof(Node*) * path_length);
     if (!path) return BAD_FILE_FORMAT;
     current = end;
     int index = path_length - 1;
     
-    // Remplir le tableau en remontant depuis end vers start
+    // Fill the table by working backwards from end to start
     while (current != NULL) {
         path[index] = current;
         current = current->parent;
         index--;
     }
     
-    // Afficher le chemin
+    // Show path
     printf("Shortest path (distance: %d): ", end->distance);
     for (int i = 0; i < path_length; i++) {
         printf("%d", path[i]->id);
